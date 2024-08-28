@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Searching</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        button {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-size: 16px;
+        }
+
+        input[type="text"] {
+            padding: 5px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Barcode Scanner</h1>
+    <button onclick="scanBarcode()">Start Scanning</button>
+    <button onclick="stopScanning()">Stop Scanning</button>
+    <button onclick="saveData()">Save Data</button>
+    <p id="result"></p>
+    <div id="student-details"></div>
+
+    <h1>Student Information</h1>
+    <form method="get" action="javascript:void(0);" onsubmit="searchStudent()">
+        <label for="erpid">Enter ERP ID:</label>
+        <input type="text" id="erpid" name="erpid" required>
+        <button type="submit">Search</button>
+        <button type="button" onclick="saveData()">Save Data</button>
+    </form>
+    
+    <script>
+        let currentStudent = null;
+        let scanning = true;
+
+        async function scanBarcode() {
+            scanning = true;
+            while (scanning) {
+                const response = await fetch('/scan', { method: 'POST' });
+                const data = await response.json();
+                if (data.erpid) {
+                    document.getElementById('result').innerText = 'ERP ID: ' + data.erpid;
+                    currentStudent = data;
+                    displayStudentDetails(data);
+                } else {
+                    document.getElementById('result').innerText = 'Error: ' + data.error;
+                }
+            }
+        }
+
+        async function stopScanning() {
+            scanning = false;
+            await fetch('/stop_scan', { method: 'POST' });
+        }
+
+        async function searchStudent() {
+    const erpid = document.getElementById('erpid').value;
+    const response = await fetch('/search', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ erpid: erpid })  // Send the ERP ID as JSON
+    });
+    const data = await response.json();
+    if (data.erpid) {
+        currentStudent = data;
+        displayStudentDetails(data);
+    } else {
+        alert('Error: ' + data.error);
+    }
+}
+
+        async function saveData() {
+            if (currentStudent) {
+                const response = await fetch('/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentStudent)
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(data.success);
+                    clearStudentDetails();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } else {
+                alert('No student data to save');
+            }
+        }
+
+        function displayStudentDetails(student) {
+            const detailsDiv = document.getElementById('student-details');
+            detailsDiv.innerHTML = `
+                <table>
+                    <tr>
+                        <th>ERP ID</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Branch</th>
+                    </tr>
+                    <tr>
+                        <td>${student.erpid}</td>
+                        <td>${student.name}</td>
+                        <td>${student.phone}</td>
+                        <td>${student.email}</td>
+                        <td>${student.branch}</td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function clearStudentDetails() {
+            const detailsDiv = document.getElementById('student-details');
+            detailsDiv.innerHTML = '';
+            currentStudent = null;
+            document.getElementById('result').innerText = '';
+            document.getElementById('erpid').value = '';
+        }
+    </script>
+</body>
+</html>

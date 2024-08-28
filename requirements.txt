@@ -1,0 +1,6 @@
+Flask
+pymongo
+opencv-python
+openpyxl
+datetime
+pyzbar
